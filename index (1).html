@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Usul elfiqh - Flipbook</title>
+    
+    <!-- Open Graph Meta Tags for Discord & Social Previews -->
+    <meta property="og:title" content="Usul elfiqh - Interactive Flipbook">
+    <meta property="og:description" content="Click to read and flip through the pages directly in your browser.">
+    <meta property="og:image" content="https://raw.githubusercontent.com/ayyoubi/Flipbook/main/cover.jpg">
+    <meta property="url" content="https://ayyoubi.github.io/Flipbook/">
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/page-flip/dist/js/page-flip.browser.js"></script>
+    <style>
+        body { margin: 0; background: #2f3136; display: flex; justify-content: center; align-items: center; min-height: 100vh; overflow: hidden; font-family: Arial, sans-serif; color: white; }
+        #book { width: 90vw; height: 90vh; box-shadow: 0 0 20px rgba(0,0,0,0.5); display: none; }
+        #loading { font-size: 1.1rem; text-align: center; padding: 20px; max-width: 90%; word-break: break-all; }
+        .page { background-color: white; display: flex; justify-content: center; align-items: center; overflow: hidden; }
+        .page canvas { max-width: 100%; max-height: 100%; object-fit: contain; }
+    </style>
+</head>
+<body>
+    <div id="loading">Initializing reader...</div>
+    <div id="book"></div>
+
+    <script>
+        const loadingDiv = document.getElementById('loading');
+        const bookContainer = document.getElementById('book');
+
+        try {
+            // Absolute URL to bypass Discord sandbox relative-path issues
+            const url = 'https://ayyoubi.github.io/Flipbook/usul_elfiqh.pdf';
+            
+            // Disable worker if sandbox blocks it, forcing main thread execution
+            pdfjsLib.GlobalWorkerOptions.workerSrc = '';
+
+            loadingDiv.innerText = "Loading PDF document...";
+
+            pdfjsLib.getDocument(url).promise.then(async pdf => {
+                let pageDivs = [];
+                loadingDiv.innerText = `PDF loaded (${pdf.numPages} pages). Rendering...`;
+
+                for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+                    loadingDiv.innerText = `Rendering page ${pageNum} of ${pdf.numPages}...`;
+                    const page = await pdf.getPage(pageNum);
+                    const viewport = page.getViewport({ scale: 1.5 });
+
+                    const canvas = document.createElement('canvas');
+                    canvas.height = viewport.height;
+                    canvas.width = viewport.width;
+                    const context = canvas.getContext('2d');
+
+                    await page.render({ canvasContext: context, viewport: viewport }).promise;
+
+                    const div = document.createElement('div');
+                    div.className = 'page';
+                    div.appendChild(canvas);
+                    pageDivs.push(div);
+                }
+
+                loadingDiv.style.display = 'none';
+                bookContainer.style.display = 'block';
+
+                const pageFlip = new St.PageFlip(bookContainer, {
+                    width: 550,
+                    height: 733,
+                    size: "stretch",
+                    minWidth: 315,
+                    maxWidth: 1000,
+                    minHeight: 420,
+                    maxHeight: 1350,
+                    maxShadowOpacity: 0.5,
+                    showCover: true,
+                    mobileScrollSupport: false
+                });
+
+                pageFlip.loadFromHTML(pageDivs);
+
+            }).catch(err => {
+                loadingDiv.style.color = '#ff6b6b';
+                loadingDiv.innerText = "PDF Load Error: " + err.message;
+                console.error("PDF Error:", err);
+            });
+
+        } catch (e) {
+            loadingDiv.style.color = '#ff6b6b';
+            loadingDiv.innerText = "Script Error: " + e.message;
+            console.error("Script Error:", e);
+        }
+    </script>
+</body>
+</html>
